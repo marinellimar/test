@@ -79,13 +79,7 @@
 
 
         async function checkLogin() {
-            const res = await fetch("/api/auth/profilo", { credentials: "include" });
-            if (res.ok) {
-                const data = await res.json();
-                document.getElementById("username").textContent = `👤 ${data.username} (${data.livello})`;
-            } else {
-                window.location.href = "/login.html";
-            }
+             
         }
 
         window.addEventListener("DOMContentLoaded", () => {
