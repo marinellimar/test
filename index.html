@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionale CRUD Frontend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body class="bg-gray-100 overflow-hidden text-sm">
+
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- Menu Laterale -->
+        <div id="sidebar" class="bg-gray-800 text-white w-full md:w-64 p-4 fixed inset-0 transform -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out z-20 flex flex-col justify-between h-screen">
+
+            <!-- Logo / Menu principale -->
+            <div>
+                <div class="text-xl font-bold mb-4">Gestionale</div>
+                <nav>
+                    <ul id="menu-dinamico" class="space-y-2">
+                    </ul>
+                </nav>
+            </div>
+
+            <!-- Sezione utente fissa in basso -->
+            <div class="text-xs pt-4 border-t border-gray-700">
+                <div class="mb-2 text-gray-300">Connesso come:</div>
+                <div id="username" class="mb-2 font-semibold">Utente</div>
+
+                <button id="profile-button" class="w-full text-left p-2 rounded hover:bg-gray-700 flex items-center gap-2">
+                    <i class="fa-solid fa-user"></i> Profilo
+                </button>
+                <button id="settings-button" class="w-full text-left p-2 rounded hover:bg-gray-700 flex items-center gap-2">
+                    <i class="fa-solid fa-gear"></i> Impostazioni
+                </button>
+                <button id="logout-button" class="w-full text-left p-2 rounded hover:bg-red-700 bg-red-600 text-white mt-2 flex items-center gap-2">
+                    <i class="fa-solid fa-right-from-bracket"></i> Logout
+                </button>
+            </div>
+        </div>
+
+
+        <!-- Overlay per mobile -->
+        <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden md:hidden z-10"></div>
+
+        <!-- Contenuto principale -->
+        <div class="flex-1 md:ml-64 flex flex-col overflow-hidden h-screen">
+            <main class="p-3 flex-1 h-full">
+                <button id="menu-btn" class="md:hidden text-gray-500 mb-2 focus:outline-none">
+                    &#9776; Menu
+                </button>
+                <div class="p-3 h-full">
+                    <div class="bg-white shadow rounded flex flex-col h-full ">
+                        <h2 class="text-sm font-semibold mb-2" id="titolo-crud">Seleziona una voce dal menu</h2>
+                        <div id="contenuto-principale" class="flex-1">Contenuto dinamico</div>
+                    </div>
+                </div>
+            </main>
+        </div>
+      
+
+    <script>
+        const menuBtn = document.getElementById('menu-btn');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        const contenuto = document.getElementById('contenuto-principale');
+        const titoloCrud = document.getElementById('titolo-crud');
+        const menu = document.getElementById('menu-dinamico');
+        menuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        });
+
+        overlay.addEventListener('click', () => {
+            sidebar.classList.add('-translate-x-full');
+            overlay.classList.add('hidden');
+        });
+
+
+        async function checkLogin() {
+            const res = await fetch("/api/auth/profilo", { credentials: "include" });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById("username").textContent = `👤 ${data.username} (${data.livello})`;
+            } else {
+                window.location.href = "/login.html";
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            checkLogin();
+            caricaMenu();
+        });
+
+        // Mock username
+        document.getElementById('username').textContent = localStorage.getItem('username') || 'Admin';
+
+        // Logout logic
+        document.getElementById('logout-button').addEventListener('click', () => {
+            localStorage.removeItem('authToken'); // se usi un token
+            document.cookie = "authToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; Secure; SameSite=Strict";
+            window.location.href = "/login.html";
+        });
+
+        // Eventuali altri pulsanti
+        document.getElementById('profile-button').addEventListener('click', () => {
+            alert("Vai al profilo utente");
+        });
+
+        document.getElementById('settings-button').addEventListener('click', () => {
+            alert("Vai alle impostazioni");
+        });
+
+        async function caricaMenu() {
+            const res = await fetch("/api/metadata/menu", { credentials: "include" });
+            const voci = await res.json();
+
+            const menu = document.getElementById("menu-dinamico");
+            voci.forEach(item => {
+                const li = document.createElement("li");
+                const a = document.createElement("a");
+                a.href = "#";
+                a.textContent = item.label;
+                a.className = "block p-2 rounded hover:bg-gray-700";
+                a.addEventListener("click", () => loadCRUD(item.crud));
+                li.appendChild(a);
+                menu.appendChild(li);
+            });
+        }
+        // ✅ Carica crud.html e chiama initCRUD(tabella)
+        async function loadCRUD(tabella) {
+            titoloCrud.textContent = tabella.charAt(0).toUpperCase() + tabella.slice(1);
+
+            const res = await fetch("crud.html?Pv=1");
+            if (!res.ok) {
+                contenuto.innerHTML = "<div class='text-red-600'>❌ Errore nel caricamento della pagina CRUD.</div>";
+                return;
+            }
+
+            const html = await res.text();
+            const container = document.createElement("div");
+            container.innerHTML = html;
+
+            // Esegui gli script
+            container.querySelectorAll("script").forEach(oldScript => {
+                const newScript = document.createElement("script");
+                if (oldScript.src) {
+                    newScript.src = oldScript.src;
+                } else {
+                    newScript.textContent = oldScript.textContent;
+                }
+                document.body.appendChild(newScript);
+            });
+
+            // Rimuovi gli script dal contenuto da inserire
+            container.querySelectorAll("script").forEach(s => s.remove());
+            contenuto.innerHTML = container.innerHTML;
+
+            // Chiama initCRUD (ora sicuramente definita)
+            if (typeof window.initCRUD === "function") {
+                window.initCRUD(tabella);
+            }
+        }
+    </script>
+
+    <script>
+        const version = "1.0.0";
+        document.write(`<script src="crud.js?v=${version}"><\/script>`);
+    </script>
+</body>
+</html>

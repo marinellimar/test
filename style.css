@@ -1,0 +1,22 @@
+#crud-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+#crud-toolbar,
+#crud-footer {
+  flex-shrink: 0;
+}
+
+#crud-table-wrapper {
+  flex-grow: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+#crud-modal .modal-content {
+  max-height: 90vh;
+  overflow-y: auto;
+}
